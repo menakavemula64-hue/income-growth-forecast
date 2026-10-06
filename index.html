@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="en" class="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f7f5">
+  <title>Income Growth Forecast</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: "class" };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <style>
+    :root { color-scheme: light; --page: #f4f7f5; --surface: #fff; --ink: #17251f; --muted: #718078; --line: #e4ebe6; --green: #167a56; --green-soft: #e5f4eb; --coral: #c46145; --amber: #bb792b; }
+    html.dark { color-scheme: dark; --page: #121b18; --surface: #192521; --ink: #edf5ef; --muted: #a1b2a8; --line: #304039; --green: #71d1a0; --green-soft: #233c31; --coral: #f09a7c; --amber: #e5b86e; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--page); color: var(--ink); font-family: "DM Sans", sans-serif; transition: background .2s ease, color .2s ease; }
+    h1, h2, h3, .display { font-family: "Manrope", sans-serif; }
+    .surface { background: var(--surface); border: 1px solid var(--line); }
+    .muted { color: var(--muted); }
+    .line { border-color: var(--line); }
+    .accent { color: var(--green); }
+    .drop-zone { transition: border-color .18s ease, background .18s ease, transform .18s ease; }
+    .drop-zone.drag-over { border-color: var(--green); background: var(--green-soft); transform: translateY(-2px); }
+    .button-primary { background: #167a56; color: #fff; transition: background .18s ease, transform .18s ease; }
+    .button-primary:hover { background: #116747; transform: translateY(-1px); }
+    html.dark .button-primary { background: #31885e; }
+    html.dark .button-primary:hover { background: #3a9b6d; }
+    .button-secondary { border: 1px solid var(--line); background: var(--surface); color: var(--ink); transition: border-color .18s ease, transform .18s ease; }
+    .button-secondary:hover { border-color: var(--green); transform: translateY(-1px); }
+    .field { border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+    .metric-card { min-height: 132px; }
+    .chart-wrap { position: relative; height: 310px; }
+    .range-track { accent-color: var(--green); }
+    .table-scroll { max-height: 340px; overflow: auto; }
+    @media (max-width: 640px) { .chart-wrap { height: 250px; } }
+  </style>
+</head>
+<body>
+  <div class="min-h-screen">
+    <header class="border-b line">
+      <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+        <a class="flex min-w-0 items-center gap-3" href="#top" aria-label="Income Growth Forecast home">
+          <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-700 text-white dark:bg-emerald-600"><i data-lucide="chart-no-axes-combined" class="h-5 w-5"></i></span>
+          <span class="min-w-0"><span class="block text-sm font-bold leading-tight">Income Growth Forecast</span><span class="muted hidden text-xs sm:block">Personal income analytics</span></span>
+        </a>
+        <div class="flex shrink-0 items-center gap-2">
+          <button id="downloadTemplate" class="button-secondary inline-flex h-10 w-10 items-center justify-center gap-2 rounded-lg px-0 text-sm font-semibold sm:w-auto sm:px-3" type="button" aria-label="Download Excel template" title="Download Excel template"><i data-lucide="file-down" class="h-4 w-4"></i><span class="hidden sm:inline">Excel template</span></button>
+          <button id="themeToggle" class="button-secondary inline-flex h-10 w-10 items-center justify-center rounded-lg" type="button" aria-label="Toggle dark mode" title="Toggle dark mode"><i data-lucide="moon" class="h-4 w-4"></i></button>
+        </div>
+      </div>
+    </header>
+
+    <main id="top" class="mx-auto max-w-7xl px-4 pb-12 pt-8 sm:px-6 lg:px-8">
+      <section class="mb-7 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+        <div>
+          <p class="mb-2 text-xs font-bold uppercase text-emerald-700 dark:text-emerald-300">Your financial picture</p>
+          <h1 class="display text-3xl font-extrabold sm:text-4xl">Income, in perspective.</h1>
+          <p class="muted mt-2 max-w-2xl text-sm leading-6">Explore your earning history, measure its growth, and model a possible future trend.</p>
+        </div>
+        <div id="dataBadge" class="muted inline-flex w-fit items-center gap-2 rounded-full border line px-3 py-2 text-xs"><span class="h-2 w-2 rounded-full bg-amber-500"></span><span>No spreadsheet loaded</span></div>
+      </section>
+
+      <section class="surface mb-6 rounded-2xl p-4 sm:p-5" aria-labelledby="upload-heading">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div><h2 id="upload-heading" class="text-base font-bold">Bring in your income history</h2><p class="muted mt-1 text-sm">Use the template or upload a completed spreadsheet. Your file stays in this browser.</p></div>
+          <span class="muted text-xs">XLSX, XLS, or CSV</span>
+        </div>
+        <label id="dropZone" for="fileInput" class="drop-zone flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed line px-4 py-7 text-center">
+          <span class="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"><i data-lucide="upload" class="h-5 w-5"></i></span>
+          <span class="text-sm font-semibold">Drop your spreadsheet here or <span class="accent underline underline-offset-2">browse files</span></span>
+          <span class="muted mt-1 text-xs">Required columns: Date, Source/Category, Amount</span>
+          <input id="fileInput" class="sr-only" type="file" accept=".xlsx,.xls,.csv">
+        </label>
+        <p id="uploadMessage" class="muted mt-3 min-h-5 text-sm" role="status" aria-live="polite">Download the template to see the expected columns and example rows.</p>
+      </section>
+
+      <section class="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-label="Income summary metrics">
+        <article class="surface metric-card rounded-xl p-4"><div class="muted flex items-center gap-2 text-xs font-semibold"><i data-lucide="wallet" class="h-4 w-4"></i>Total income to date</div><div id="totalIncome" class="display mt-4 text-2xl font-extrabold">--</div><p class="muted mt-1 text-xs">All valid uploaded transactions</p></article>
+        <article class="surface metric-card rounded-xl p-4"><div class="muted flex items-center gap-2 text-xs font-semibold"><i data-lucide="calendar-days" class="h-4 w-4"></i>Average per day</div><div id="averageDaily" class="display mt-4 text-2xl font-extrabold">--</div><p id="dailyContext" class="muted mt-1 text-xs">Across your recorded date range</p></article>
+        <article class="surface metric-card rounded-xl p-4"><div class="muted flex items-center gap-2 text-xs font-semibold"><i data-lucide="repeat-2" class="h-4 w-4"></i>Month-over-month</div><div id="momGrowth" class="display mt-4 text-2xl font-extrabold">--</div><p id="momContext" class="muted mt-1 text-xs">Latest month vs. prior month</p></article>
+        <article class="surface metric-card rounded-xl p-4"><div class="muted flex items-center gap-2 text-xs font-semibold"><i data-lucide="trending-up" class="h-4 w-4"></i>Total income growth</div><div id="totalGrowth" class="display mt-4 text-2xl font-extrabold">--</div><p class="muted mt-1 text-xs">First to latest recorded month</p></article>
+        <article class="surface metric-card rounded-xl p-4"><div class="muted flex items-center gap-2 text-xs font-semibold"><i data-lucide="scan-line" class="h-4 w-4"></i>Trend fit (R²)</div><div id="r2Metric" class="display mt-4 text-2xl font-extrabold">--</div><p id="r2Context" class="muted mt-1 text-xs">How closely a line fits monthly totals</p></article>
+      </section>
+
+      <section class="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.85fr)]">
+        <article class="surface min-w-0 rounded-2xl p-4 sm:p-5">
+          <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+            <div><h2 class="text-base font-bold">Income trend</h2><p class="muted mt-1 text-xs">Monthly totals and a linear trend forecast</p></div>
+            <div class="flex items-center gap-4 text-xs"><span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-emerald-700 dark:bg-emerald-400"></span>History</span><span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-orange-500"></span>Forecast</span></div>
+          </div>
+          <div id="chartEmpty" class="muted flex h-[250px] items-center justify-center rounded-xl border line text-center text-sm">Upload your spreadsheet to see your income trend.</div>
+          <div id="chartWrap" class="chart-wrap hidden"><canvas id="incomeChart" aria-label="Monthly income and forecast chart"></canvas></div>
+        </article>
+
+        <article class="surface rounded-2xl p-4 sm:p-5">
+          <div class="mb-5"><p class="mb-1 text-xs font-bold uppercase text-emerald-700 dark:text-emerald-300">Projection tool</p><h2 class="text-base font-bold">Explore a future period</h2><p class="muted mt-1 text-xs leading-5">Extend the fitted monthly trend beyond your last recorded date.</p></div>
+          <label class="mb-2 block text-xs font-semibold" for="horizon">Forecast duration</label>
+          <div class="grid grid-cols-[1fr_120px] gap-2">
+            <input id="horizon" class="field h-11 min-w-0 rounded-lg px-3 text-sm" type="number" min="1" max="3650" value="30" inputmode="numeric" aria-label="Forecast duration number">
+            <select id="timeUnit" class="field h-11 rounded-lg px-3 text-sm" aria-label="Forecast duration unit"><option value="days">Days</option><option value="weeks">Weeks</option><option value="months">Months</option></select>
+          </div>
+          <input id="horizonSlider" class="range-track mt-4 w-full" type="range" min="1" max="365" value="30" aria-label="Forecast duration slider">
+          <div class="muted mt-1 flex justify-between text-[11px]"><span id="rangeMin">1 day</span><span id="rangeMax">365 days</span></div>
+          <div class="mt-5 rounded-xl bg-emerald-50 p-4 dark:bg-emerald-950/50">
+            <p id="forecastLabel" class="text-xs font-semibold text-emerald-900 dark:text-emerald-100">Projected income over the next 30 days</p>
+            <p id="forecastIncome" class="display mt-2 text-3xl font-extrabold text-emerald-900 dark:text-emerald-100">--</p>
+            <p id="forecastDaily" class="mt-1 text-xs text-emerald-800 dark:text-emerald-200">Daily average: --</p>
+          </div>
+          <div class="mt-4 flex items-start gap-2 rounded-lg border line p-3"><i data-lucide="info" class="mt-0.5 h-4 w-4 shrink-0 text-orange-600 dark:text-orange-300"></i><p id="forecastNote" class="muted text-xs leading-5">Upload at least two different dates to calculate a forecast. R² describes how well the historical line fits; it is not a guarantee.</p></div>
+        </article>
+      </section>
+
+      <section class="surface overflow-hidden rounded-2xl">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b line px-4 py-4 sm:px-5">
+          <div><h2 class="text-base font-bold">Transaction details</h2><p id="tableSummary" class="muted mt-1 text-xs">Your uploaded rows will appear here.</p></div>
+          <button id="clearData" class="button-secondary inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-xs font-semibold" type="button"><i data-lucide="trash-2" class="h-4 w-4"></i>Clear data</button>
+        </div>
+        <div class="table-scroll">
+          <table class="w-full min-w-[520px] text-left text-sm">
+            <thead class="sticky top-0 surface muted text-xs"><tr><th class="px-4 py-3 font-semibold sm:px-5">Date</th><th class="px-4 py-3 font-semibold">Source / Category</th><th class="px-4 py-3 text-right font-semibold sm:px-5">Amount</th></tr></thead>
+            <tbody id="transactionRows"><tr><td colspan="3" class="muted px-4 py-8 text-center text-sm">No transactions loaded yet.</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+      <footer class="muted mt-5 flex flex-col gap-2 text-xs sm:flex-row sm:items-center sm:justify-between"><span>Forecasts are mathematical estimates based on historical data, not financial advice.</span><span>Spreadsheet data is processed locally in your browser.</span></footer>
+    </main>
+  </div>
+
+  <script>
+    const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+    const dateFormatter = new Intl.DateTimeFormat("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+    const monthFormatter = new Intl.DateTimeFormat("en-US", { year: "numeric", month: "short", timeZone: "UTC" });
+    const state = { records: [], chart: null, forecast: null };
+
+    const elements = {
+      fileInput: document.getElementById("fileInput"),
+      dropZone: document.getElementById("dropZone"),
+      uploadMessage: document.getElementById("uploadMessage"),
+      horizon: document.getElementById("horizon"),
+      timeUnit: document.getElementById("timeUnit"),
+      horizonSlider: document.getElementById("horizonSlider"),
+      chartEmpty: document.getElementById("chartEmpty"),
+      chartWrap: document.getElementById("chartWrap"),
+      transactionRows: document.getElementById("transactionRows")
+    };
+
+    function utcDay(date) {
+      return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+    }
+
+    function parseDate(value) {
+      if (value instanceof Date && !Number.isNaN(value.getTime())) {
+        return new Date(Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()));
+      }
+      if (typeof value === "number" && window.XLSX) {
+        const parts = XLSX.SSF.parse_date_code(value);
+        if (parts) return new Date(Date.UTC(parts.y, parts.m - 1, parts.d));
+      }
+      if (typeof value === "string") {
+        const input = value.trim();
+        const iso = input.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+        if (iso) return new Date(Date.UTC(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3])));
+        const parsed = new Date(input);
+        if (!Number.isNaN(parsed.getTime())) return new Date(Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()));
+      }
+      return null;
+    }
+
+    function findColumn(headers, candidates) {
+      return headers.findIndex((header) => candidates.includes(String(header ?? "").trim().toLowerCase().replace(/\s+/g, " ")));
+    }
+
+    function normalizeRows(rows) {
+      if (!rows.length) throw new Error("The spreadsheet is empty.");
+      const headers = rows[0];
+      const dateIndex = findColumn(headers, ["date", "transaction date"]);
+      const categoryIndex = findColumn(headers, ["source/category", "source / category", "source", "category"]);
+      const amountIndex = findColumn(headers, ["amount", "income", "earnings"]);
+      if (dateIndex < 0 || categoryIndex < 0 || amountIndex < 0) {
+        throw new Error("Required headers are Date, Source/Category, and Amount. Download the template if needed.");
+      }
+
+      let skipped = 0;
+      const records = rows.slice(1).map((row) => {
+        const date = parseDate(row[dateIndex]);
+        const rawAmount = row[amountIndex];
+        const amount = typeof rawAmount === "number" ? rawAmount : Number(String(rawAmount ?? "").replace(/[,$]/g, "").trim());
+        if (!date || !Number.isFinite(amount) || amount < 0) {
+          skipped += 1;
+          return null;
+        }
+        return { date, category: String(row[categoryIndex] ?? "Uncategorized").trim() || "Uncategorized", amount };
+      }).filter(Boolean).sort((a, b) => a.date - b.date);
+
+      if (records.length < 2) throw new Error("At least two valid income rows with dates and amounts are required.");
+      const distinctMonths = new Set(records.map((record) => monthKey(record.date)));
+      if (distinctMonths.size < 2) throw new Error("Add income rows from at least two different calendar months so a trend can be fitted.");
+      return { records, skipped };
+    }
+
+    // Read the first worksheet locally and normalize its rows before using any values.
+    async function parseFile(file) {
+      if (!window.XLSX) throw new Error("Spreadsheet library did not load. Check your internet connection and refresh.");
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: null, raw: true });
+      return normalizeRows(rows);
+    }
+
+    function monthKey(date) {
+      return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+    }
+
+    function monthLabel(key) {
+      const [year, month] = key.split("-").map(Number);
+      return monthFormatter.format(new Date(Date.UTC(year, month - 1, 1)));
+    }
+
+    function createMonthlySeries(records) {
+      const totals = monthTotals(records);
+      const firstDate = new Date(Math.min(...records.map((record) => utcDay(record.date))));
+      const lastDate = new Date(Math.max(...records.map((record) => utcDay(record.date))));
+      const firstOrdinal = firstDate.getUTCFullYear() * 12 + firstDate.getUTCMonth();
+      const lastOrdinal = lastDate.getUTCFullYear() * 12 + lastDate.getUTCMonth();
+      const values = [];
+      for (let ordinal = firstOrdinal; ordinal <= lastOrdinal; ordinal += 1) {
+        const year = Math.floor(ordinal / 12);
+        const month = ordinal % 12;
+        values.push(totals.get(`${year}-${String(month + 1).padStart(2, "0")}`) ?? 0);
+      }
+      return { values, firstOrdinal, lastDate };
+    }
+
+    // Fit ordinary least squares to monthly totals, including zero-total gaps between months.
+    function linearFit(values) {
+      const count = values.length;
+      const meanX = (count - 1) / 2;
+      const meanY = values.reduce((sum, value) => sum + value, 0) / count;
+      let numerator = 0;
+      let denominator = 0;
+      let totalSquares = 0;
+      for (let index = 0; index < count; index += 1) {
+        numerator += (index - meanX) * (values[index] - meanY);
+        denominator += (index - meanX) ** 2;
+        totalSquares += (values[index] - meanY) ** 2;
+      }
+      const slope = denominator === 0 ? 0 : numerator / denominator;
+      const intercept = meanY - slope * meanX;
+      let residualSquares = 0;
+      for (let index = 0; index < count; index += 1) {
+        residualSquares += (values[index] - (intercept + slope * index)) ** 2;
+      }
+      const r2 = totalSquares === 0 ? (residualSquares === 0 ? 1 : 0) : 1 - residualSquares / totalSquares;
+      return { slope, intercept, r2 };
+    }
+
+    // Prorate each predicted monthly total over calendar days in the requested future window.
+    function calculateForecast(records, horizonDays) {
+      const monthly = createMonthlySeries(records);
+      const fit = linearFit(monthly.values);
+      let total = 0;
+      for (let offset = 0; offset < horizonDays; offset += 1) {
+        const date = new Date(monthly.lastDate.getTime() + (offset + 1) * 86400000);
+        const ordinal = date.getUTCFullYear() * 12 + date.getUTCMonth();
+        const monthIndex = ordinal - monthly.firstOrdinal;
+        const daysInMonth = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)).getUTCDate();
+        const projectedMonth = Math.max(0, fit.intercept + fit.slope * monthIndex);
+        total += projectedMonth / daysInMonth;
+      }
+      return { ...fit, horizonDays, total: Math.max(0, total), dailyAverage: Math.max(0, total / horizonDays), monthly };
+    }
+
+    function monthTotals(records) {
+      const totals = new Map();
+      for (const record of records) {
+        const key = monthKey(record.date);
+        totals.set(key, (totals.get(key) ?? 0) + record.amount);
+      }
+      return totals;
+    }
+
+    function getMonthOverMonth(totals, lastDate) {
+      const latest = monthKey(lastDate);
+      const previousDate = new Date(Date.UTC(lastDate.getUTCFullYear(), lastDate.getUTCMonth() - 1, 1));
+      const previous = monthKey(previousDate);
+      const latestTotal = totals.get(latest) ?? 0;
+      const previousTotal = totals.get(previous) ?? 0;
+      if (previousTotal === 0) return { value: null, text: "No prior-month baseline", latest, previous };
+      return { value: ((latestTotal - previousTotal) / previousTotal) * 100, latest, previous };
+    }
+
+    function formatPercent(value) {
+      if (!Number.isFinite(value)) return "--";
+      return `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
+    }
+
+    function setMetric(id, text, tone) {
+      const element = document.getElementById(id);
+      element.textContent = text;
+      element.classList.remove("text-emerald-700", "text-orange-600", "text-rose-600", "dark:text-emerald-300", "dark:text-orange-300", "dark:text-rose-300");
+      if (tone === "up") element.classList.add("text-emerald-700", "dark:text-emerald-300");
+      if (tone === "down") element.classList.add("text-rose-600", "dark:text-rose-300");
+      if (tone === "neutral") element.classList.add("text-orange-600", "dark:text-orange-300");
+    }
+
+    function updateMetrics(records, forecast) {
+      const total = records.reduce((sum, record) => sum + record.amount, 0);
+      const firstDay = Math.min(...records.map((record) => utcDay(record.date)));
+      const lastDay = Math.max(...records.map((record) => utcDay(record.date)));
+      const spanDays = Math.round((lastDay - firstDay) / 86400000) + 1;
+      const totals = monthTotals(records);
+      const mom = getMonthOverMonth(totals, new Date(lastDay));
+      const firstMonthKey = monthKey(new Date(firstDay));
+      const latestMonthKey = monthKey(new Date(lastDay));
+      const firstMonthIncome = totals.get(firstMonthKey) ?? 0;
+      const latestMonthIncome = totals.get(latestMonthKey) ?? 0;
+      const overallGrowth = firstMonthIncome === 0 ? null : ((latestMonthIncome - firstMonthIncome) / firstMonthIncome) * 100;
+
+      document.getElementById("totalIncome").textContent = currency.format(total);
+      document.getElementById("averageDaily").textContent = currency.format(total / spanDays);
+      document.getElementById("dailyContext").textContent = `Across ${spanDays.toLocaleString()} calendar day${spanDays === 1 ? "" : "s"}`;
+      document.getElementById("momContext").textContent = mom.value === null ? mom.text : `${monthLabel(mom.latest)} vs. ${monthLabel(mom.previous)}`;
+      setMetric("momGrowth", mom.value === null ? "--" : formatPercent(mom.value), mom.value > 0 ? "up" : mom.value < 0 ? "down" : "neutral");
+      setMetric("totalGrowth", overallGrowth === null ? "--" : formatPercent(overallGrowth), overallGrowth > 0 ? "up" : overallGrowth < 0 ? "down" : "neutral");
+      setMetric("r2Metric", `${(forecast.r2 * 100).toFixed(1)}%`, forecast.r2 >= 0.7 ? "up" : "neutral");
+      document.getElementById("r2Context").textContent = forecast.r2 >= 0.7 ? "Strong fit to this history; not a guarantee" : "Weak or variable fit; use caution";
+
+      const badge = document.getElementById("dataBadge");
+      badge.innerHTML = '<span class="h-2 w-2 rounded-full bg-emerald-600"></span><span>Spreadsheet loaded · ' + records.length.toLocaleString() + ' rows</span>';
+    }
+
+    // Plot observed monthly totals and the projected portion of each future month.
+    function buildChart(records, forecast) {
+      const monthly = monthTotals(records);
+      const first = new Date(Math.min(...records.map((item) => utcDay(item.date))));
+      const last = new Date(Math.max(...records.map((item) => utcDay(item.date))));
+      const historicalKeys = [];
+      for (let cursor = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth(), 1)); cursor <= last; cursor.setUTCMonth(cursor.getUTCMonth() + 1)) {
+        historicalKeys.push(monthKey(cursor));
+      }
+
+      const futureBuckets = new Map();
+      let forecastDate = new Date(forecast.monthly.lastDate.getTime() + 86400000);
+      for (let offset = 0; offset < forecast.horizonDays; offset += 1) {
+        const monthOrdinal = forecastDate.getUTCFullYear() * 12 + forecastDate.getUTCMonth();
+        const monthIndex = monthOrdinal - forecast.monthly.firstOrdinal;
+        const daysInMonth = new Date(Date.UTC(forecastDate.getUTCFullYear(), forecastDate.getUTCMonth() + 1, 0)).getUTCDate();
+        const projected = Math.max(0, forecast.intercept + forecast.slope * monthIndex) / daysInMonth;
+        const key = monthKey(forecastDate);
+        futureBuckets.set(key, (futureBuckets.get(key) ?? 0) + projected);
+        forecastDate = new Date(forecastDate.getTime() + 86400000);
+      }
+      const labels = [...historicalKeys];
+      for (const key of futureBuckets.keys()) if (!labels.includes(key)) labels.push(key);
+      const actualData = labels.map((key) => historicalKeys.includes(key) ? (monthly.get(key) ?? 0) : null);
+      const forecastData = labels.map((key) => futureBuckets.has(key) ? futureBuckets.get(key) : null);
+      if (historicalKeys.length) {
+        const lastKey = historicalKeys.at(-1);
+        forecastData[historicalKeys.length - 1] = (monthly.get(lastKey) ?? 0) + (futureBuckets.get(lastKey) ?? 0);
+      }
+
+      elements.chartEmpty.classList.add("hidden");
+      elements.chartWrap.classList.remove("hidden");
+      const dark = document.documentElement.classList.contains("dark");
+      const textColor = dark ? "#a1b2a8" : "#718078";
+      const gridColor = dark ? "#304039" : "#e4ebe6";
+      if (state.chart) state.chart.destroy();
+      state.chart = new Chart(document.getElementById("incomeChart"), {
+        type: "line",
+        data: {
+          labels: labels.map(monthLabel),
+          datasets: [
+            { label: "Recorded income", data: actualData, borderColor: dark ? "#71d1a0" : "#167a56", backgroundColor: dark ? "rgba(113,209,160,.12)" : "rgba(22,122,86,.10)", borderWidth: 2.5, pointRadius: 3, pointHoverRadius: 6, tension: .28, spanGaps: false, fill: true },
+            { label: "Trend forecast", data: forecastData, borderColor: dark ? "#f09a7c" : "#c46145", backgroundColor: "transparent", borderWidth: 2.5, borderDash: [7, 5], pointRadius: 3, pointHoverRadius: 6, tension: .22, spanGaps: false }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: (context) => `${context.dataset.label}: ${currency.format(context.parsed.y ?? 0)}` } }
+          },
+          scales: {
+            x: { ticks: { color: textColor, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
+            y: { beginAtZero: true, ticks: { color: textColor, callback: (value) => currency.format(value) }, grid: { color: gridColor } }
+          }
+        }
+      });
+    }
+
+    function updateForecast() {
+      if (!state.records.length) return;
+      const number = Math.max(1, Number(elements.horizon.value) || 1);
+      const unit = elements.timeUnit.value;
+      const multiplier = unit === "weeks" ? 7 : unit === "months" ? 30.4375 : 1;
+      const horizonDays = Math.max(1, Math.round(number * multiplier));
+      const result = calculateForecast(state.records, horizonDays);
+      state.forecast = result;
+      const unitLabel = unit === "days" ? (number === 1 ? "day" : "days") : unit;
+      document.getElementById("forecastLabel").textContent = `Projected income over the next ${number} ${unitLabel}`;
+      document.getElementById("forecastIncome").textContent = currency.format(result.total);
+      document.getElementById("forecastDaily").textContent = `Projected daily average: ${currency.format(result.dailyAverage)} · ${horizonDays.toLocaleString()} forecast days`;
+      const trendText = result.slope > 0 ? "increasing" : result.slope < 0 ? "decreasing" : "flat";
+      document.getElementById("forecastNote").textContent = `The fitted monthly line is ${trendText} by ${currency.format(Math.abs(result.slope))} per month. R² describes fit to past monthly totals, not a probability or guarantee. Future values are estimates.`;
+      updateMetrics(state.records, result);
+      buildChart(state.records, result);
+    }
+
+    function renderTransactions(records) {
+      const sorted = [...records].sort((a, b) => b.date - a.date);
+      document.getElementById("tableSummary").textContent = `${records.length.toLocaleString()} rows · most recent first`;
+      elements.transactionRows.innerHTML = sorted.slice(0, 250).map((record) => `<tr class="border-t line"><td class="px-4 py-3 text-sm sm:px-5">${dateFormatter.format(record.date)}</td><td class="muted px-4 py-3 text-sm">${escapeHtml(record.category)}</td><td class="px-4 py-3 text-right text-sm font-semibold sm:px-5">${currency.format(record.amount)}</td></tr>`).join("");
+      if (sorted.length > 250) elements.transactionRows.insertAdjacentHTML("beforeend", '<tr class="border-t line"><td colspan="3" class="muted px-4 py-3 text-center text-xs">Showing latest 250 rows.</td></tr>');
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
+    }
+
+    function setRecords(records, filename, skipped) {
+      state.records = records;
+      elements.uploadMessage.textContent = `${filename} loaded: ${records.length.toLocaleString()} valid rows${skipped ? `; ${skipped} invalid row${skipped === 1 ? "" : "s"} skipped` : ""}.`;
+      renderTransactions(records);
+      updateForecast();
+    }
+
+    async function handleFile(file) {
+      if (!file) return;
+      elements.uploadMessage.textContent = `Reading ${file.name} locally...`;
+      try {
+        const parsed = await parseFile(file);
+        setRecords(parsed.records, file.name, parsed.skipped);
+      } catch (error) {
+        elements.uploadMessage.textContent = error.message;
+        elements.uploadMessage.classList.add("text-rose-600");
+      }
+    }
+
+    // Generate the requested three-column Excel sample in the browser.
+    function downloadTemplate() {
+      if (!window.XLSX) {
+        elements.uploadMessage.textContent = "Excel library did not load. Check your internet connection and refresh.";
+        return;
+      }
+      const rows = [
+        ["Date", "Source/Category", "Amount"],
+        ["2025-01-15", "Salary", 4200],
+        ["2025-02-15", "Salary", 4350],
+        ["2025-03-15", "Freelance", 680],
+        ["2025-03-15", "Salary", 4350]
+      ];
+      const sheet = XLSX.utils.aoa_to_sheet(rows);
+      sheet["!cols"] = [{ wch: 18 }, { wch: 24 }, { wch: 16 }];
+      sheet["!autofilter"] = { ref: "A1:C5" };
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, sheet, "Income Data");
+      XLSX.writeFile(workbook, "income-history-template.xlsx");
+    }
+
+    function syncSlider(source) {
+      const unit = elements.timeUnit.value;
+      const settings = unit === "days" ? { max: 3650, singular: "day", plural: "days" } : unit === "weeks" ? { max: 520, singular: "week", plural: "weeks" } : { max: 120, singular: "month", plural: "months" };
+      const numberMax = settings.max;
+      elements.horizon.max = String(numberMax);
+      elements.horizonSlider.max = String(settings.max);
+      document.getElementById("rangeMin").textContent = `1 ${settings.singular}`;
+      document.getElementById("rangeMax").textContent = `${settings.max} ${settings.plural}`;
+      if (source === "unit") {
+        const value = Math.min(Number(elements.horizon.value) || 30, settings.max);
+        elements.horizon.value = String(value);
+        elements.horizonSlider.value = String(value);
+      } else if (source === "slider") {
+        elements.horizon.value = elements.horizonSlider.value;
+      } else {
+        const value = Math.min(Number(elements.horizon.value) || 1, numberMax);
+        elements.horizon.value = String(value);
+        elements.horizonSlider.value = String(Math.min(value, settings.max));
+      }
+      updateForecast();
+    }
+
+    elements.fileInput.addEventListener("change", (event) => handleFile(event.target.files[0]));
+    elements.dropZone.addEventListener("dragover", (event) => { event.preventDefault(); elements.dropZone.classList.add("drag-over"); });
+    elements.dropZone.addEventListener("dragleave", () => elements.dropZone.classList.remove("drag-over"));
+    elements.dropZone.addEventListener("drop", (event) => {
+      event.preventDefault();
+      elements.dropZone.classList.remove("drag-over");
+      handleFile(event.dataTransfer.files[0]);
+    });
+    document.getElementById("downloadTemplate").addEventListener("click", downloadTemplate);
+    elements.horizon.addEventListener("input", () => syncSlider("number"));
+    elements.horizonSlider.addEventListener("input", () => syncSlider("slider"));
+    elements.timeUnit.addEventListener("change", () => syncSlider("unit"));
+    document.getElementById("clearData").addEventListener("click", () => {
+      state.records = [];
+      if (state.chart) { state.chart.destroy(); state.chart = null; }
+      elements.chartWrap.classList.add("hidden");
+      elements.chartEmpty.classList.remove("hidden");
+      elements.uploadMessage.textContent = "Data cleared. Upload another spreadsheet when ready.";
+      document.getElementById("dataBadge").innerHTML = '<span class="h-2 w-2 rounded-full bg-amber-500"></span><span>No spreadsheet loaded</span>';
+      document.getElementById("totalIncome").textContent = "--";
+      document.getElementById("averageDaily").textContent = "--";
+      document.getElementById("dailyContext").textContent = "Across your recorded date range";
+      document.getElementById("momGrowth").textContent = "--";
+      document.getElementById("momContext").textContent = "Latest month vs. prior month";
+      document.getElementById("totalGrowth").textContent = "--";
+      document.getElementById("r2Metric").textContent = "--";
+      document.getElementById("r2Context").textContent = "How closely a line fits monthly totals";
+      document.getElementById("forecastIncome").textContent = "--";
+      document.getElementById("forecastDaily").textContent = "Daily average: --";
+      document.getElementById("forecastLabel").textContent = "Projected income for your selected period";
+      document.getElementById("forecastNote").textContent = "Upload at least two different dates to calculate a forecast. R² describes how well the historical line fits; it is not a guarantee.";
+      document.getElementById("tableSummary").textContent = "Your uploaded rows will appear here.";
+      elements.transactionRows.innerHTML = '<tr><td colspan="3" class="muted px-4 py-8 text-center text-sm">No transactions loaded yet.</td></tr>';
+    });
+
+    document.getElementById("themeToggle").addEventListener("click", () => {
+      document.documentElement.classList.toggle("dark");
+      document.documentElement.classList.toggle("light");
+      const dark = document.documentElement.classList.contains("dark");
+      document.getElementById("themeToggle").innerHTML = `<i data-lucide="${dark ? "sun" : "moon"}" class="h-4 w-4"></i>`;
+      if (window.lucide) lucide.createIcons();
+      if (state.records.length && state.forecast) buildChart(state.records, state.forecast);
+    });
+
+    syncSlider("init");
+    if (window.lucide) lucide.createIcons();
+  </script>
+</body>
+</html>
