@@ -8,6 +8,10 @@ A responsive, spreadsheet-first income analytics website. Upload a personal inco
 
 > **Demo data only:** the preview images and template use fictional sample amounts. Forecasts are estimates for exploration, not promises or financial advice.
 
+## Live app
+
+Once the GitHub Pages workflow completes, open the [Income Growth Forecast website](https://menakavemula64-hue.github.io/income-growth-forecast/). New commits to `main` publish the static app automatically.
+
 ## Preview
 
 The animated product walkthrough is [here](assets/income-growth-forecast-promo.gif). Individual screens:
