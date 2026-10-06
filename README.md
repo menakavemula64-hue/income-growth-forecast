@@ -81,7 +81,7 @@ Open [http://localhost:8010](http://localhost:8010). To stop the local server, f
 
 ## GitHub Pages deployment
 
-This is a static website and can be hosted with GitHub Pages. Push the repository, then in GitHub open **Settings → Pages**, choose **Deploy from a branch**, select `main` and `/ (root)`, and save. Once Pages finishes publishing, its public URL will appear on that settings page. The interactive site needs a public HTTPS URL; `localhost` only works on the developer's machine.
+The included `.github/workflows/pages.yml` workflow publishes this static site whenever a commit is pushed to `main`. For the first deployment, open the repository's **Settings → Pages**, set the build/deployment source to **GitHub Actions**, and save. Push to `main`; the Actions tab will show deployment progress and the Pages URL when it finishes. The interactive site needs a public HTTPS URL; `localhost` only works on the developer's machine.
 
 ## License and data
 
